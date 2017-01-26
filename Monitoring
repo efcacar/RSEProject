@@ -100,7 +100,7 @@ while True:
     show = True
     if night is True:
         now_int = int(now.hour)
-        if (now_int >= star) and (now_int <= sun):
+        if (now_int >= star) or (now_int <= sun):
             show = False
     print bcolors.WARNING + 'Show: ' + bcolors.ENDC + str(show)
 
