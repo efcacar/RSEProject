@@ -14,16 +14,16 @@ camera = PiCamera()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--time', help = 'Time to monitor sensors', default = 60, required = False)
-parser.add_argument('-u', '--humidity', help = 'Min value for humidity', default = 50, required = True, type=int)
-parser.add_argument('-U', '--Humidity', help = 'Max value for humidity', default = 70, required = True, type=int)
-parser.add_argument('-d', '--degree', help = 'Min value for temperature', default = 24, required = True, type=int)
-parser.add_argument('-D', '--Degree', help = 'Max value for temperature', default = 28, required = True, type=int)
-parser.add_argument('-p', '--pressure', help = 'Min value for pressure', default = 1000, required = True, type=int)
-parser.add_argument('-P', '--Pressure', help = 'Max value for pressure', default = 1050, required = True, type=int)
-parser.add_argument('-m', '--message', help = 'List of usernames to send a direct message if anything occurs', required = True, type=str)
+parser.add_argument('-u', '--humidity', help = 'Min value for humidity', default = 50, required = True, type = int)
+parser.add_argument('-U', '--Humidity', help = 'Max value for humidity', default = 70, required = True, type = int)
+parser.add_argument('-d', '--degree', help = 'Min value for temperature', default = 24, required = True, type = int)
+parser.add_argument('-D', '--Degree', help = 'Max value for temperature', default = 28, required = True, type = int)
+parser.add_argument('-p', '--pressure', help = 'Min value for pressure', default = 1000, required = True, type = int)
+parser.add_argument('-P', '--Pressure', help = 'Max value for pressure', default = 1050, required = True, type = int)
+parser.add_argument('-m', '--message', help = 'List of usernames to send a direct message if anything occurs', required = True, type = str)
 parser.add_argument('-n', '--night', help = 'Night mode, in night mode the matrix doesn\'t show information ', required = False, action='store_true')
-parser.add_argument('-s', '--sun', help = 'Moorning time to show information', default = 7, required = False, type=int)
-parser.add_argument('-S', '--Star', help = 'Aftenoon time to show information', default = 22, required = False, type=int)
+parser.add_argument('-s', '--star', help = 'Afternoon time to don\'t show information', default = 7, required = False, type = int)
+parser.add_argument('-S', '--sun', help = 'Morning time to show information', default = 22, required = False, type = int)
 parser.add_argument('-v', '--verbose', help = 'Show more information in LED matrix', required = False, action='store_true')
 args = parser.parse_args()
 
@@ -64,12 +64,12 @@ low_pressure = args.pressure
 high_pressure = args.Pressure
 users = args.message.split(',')
 night = args.night
+star = args.star
 sun = args.sun
-star = args.Star
 verbose = args.verbose
 
 # Show period
-print bcolors.WARNING + 'Period: ' + bcolors.ENDC + str(int(period)) + bcolors.WARNING + ' seconds' + bcolors.ENDC
+print bcolors.WARNING + 'Period: ' + bcolors.ENDC + str(int(period)) + ' seconds'
 
 # Show users
 print bcolors.WARNING + 'Users: ' + bcolors.ENDC + str(users)
@@ -79,10 +79,13 @@ print bcolors.WARNING + 'Verbose: ' + bcolors.ENDC + str(verbose)
 
 # Photo values
 photo_name = 'tweet.jpg'
-photo_path = '/root/RSEproject/' + photo_name
+photo_path = '/root/RSE/' + photo_name
 
 # Show night mode
 print bcolors.WARNING + 'Night: ' + bcolors.ENDC + str(night)
+
+# Clear SenseHat
+sense.clear()
 
 while True:
     # Get variables
@@ -94,10 +97,11 @@ while True:
     date = str(now.day) + '/' + str(now.month) + '/' + str(now.year)
 
     # Night mode
-    show = False
+    show = True
     if night is True:
-        if (int(now.hour) > sun) and (int(now.hour) < star):
-            show = True
+        now_int = int(now.hour)
+        if (now_int >= star) and (now_int <= sun):
+            show = False
     print bcolors.WARNING + 'Show: ' + bcolors.ENDC + str(show)
 
     # Get photo

@@ -1,6 +1,6 @@
 ## Synopsis
 
-This project consists in to monitor the Sense HAT's sensor and to publish the values through Twitter.
+The project aims to monitor the life of a reptil, periodically posting photos in Twitter of the reptil and sending direct messages when some paremeter of its environment is out of control.
 
 ## Motivation
 
