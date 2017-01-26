@@ -1,0 +1,209 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import argparse
+import math
+import tweepy
+import sys
+from picamera import PiCamera
+from sense_hat import SenseHat
+from time import sleep
+from datetime import datetime, date, time, timedelta
+
+camera = PiCamera()
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-t', '--time', help = 'Time to monitor sensors', default = 60, required = False)
+parser.add_argument('-u', '--humidity', help = 'Min value for humidity', default = 50, required = True, type=int)
+parser.add_argument('-U', '--Humidity', help = 'Max value for humidity', default = 70, required = True, type=int)
+parser.add_argument('-d', '--degree', help = 'Min value for temperature', default = 24, required = True, type=int)
+parser.add_argument('-D', '--Degree', help = 'Max value for temperature', default = 28, required = True, type=int)
+parser.add_argument('-p', '--pressure', help = 'Min value for pressure', default = 1000, required = True, type=int)
+parser.add_argument('-P', '--Pressure', help = 'Max value for pressure', default = 1050, required = True, type=int)
+parser.add_argument('-m', '--message', help = 'List of usernames to send a direct message if anything occurs', required = True, type=str)
+parser.add_argument('-n', '--night', help = 'Night mode, in night mode the matrix doesn\'t show information ', required = False, action='store_true')
+parser.add_argument('-s', '--sun', help = 'Moorning time to show information', default = 7, required = False, type=int)
+parser.add_argument('-S', '--Star', help = 'Aftenoon time to show information', default = 22, required = False, type=int)
+parser.add_argument('-v', '--verbose', help = 'Show more information in LED matrix', required = False, action='store_true')
+args = parser.parse_args()
+
+# To define text colors
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+# Consumer keys
+consumer_key =""
+consumer_secret = ""
+
+auth = tweepy.OAuthHandler(consumer_key,consumer_secret)
+
+# Acces tokens
+access_token = ""
+access_token_secret = ""
+auth.set_access_token(access_token,access_token_secret)
+
+api = tweepy.API(auth)
+sense = SenseHat()
+
+sense.set_rotation(180)
+
+# Get parameters
+period = float(args.time)
+low_humidity = args.humidity
+high_humidity = args.Humidity
+low_temperature = args.degree
+high_temperature = args.Degree
+low_pressure = args.pressure
+high_pressure = args.Pressure
+users = args.message.split(',')
+night = args.night
+sun = args.sun
+star = args.Star
+verbose = args.verbose
+
+# Show period
+print bcolors.WARNING + 'Period: ' + bcolors.ENDC + str(int(period)) + bcolors.WARNING + ' seconds' + bcolors.ENDC
+
+# Show users
+print bcolors.WARNING + 'Users: ' + bcolors.ENDC + str(users)
+
+# Show verbose mode
+print bcolors.WARNING + 'Verbose: ' + bcolors.ENDC + str(verbose)
+
+# Photo values
+photo_name = 'tweet.jpg'
+photo_path = '/root/RSEproject/' + photo_name
+
+# Show night mode
+print bcolors.WARNING + 'Night: ' + bcolors.ENDC + str(night)
+
+while True:
+    # Get variables
+    humidity = sense.get_humidity()
+    temperature = sense.get_temperature()
+    pressure = sense.get_pressure()
+    now = datetime.now()
+    time = str(now.hour) + ':' + str(now.minute) + ':' + str(now.second)
+    date = str(now.day) + '/' + str(now.month) + '/' + str(now.year)
+
+    # Night mode
+    show = False
+    if night is True:
+        if (int(now.hour) > sun) and (int(now.hour) < star):
+            show = True
+    print bcolors.WARNING + 'Show: ' + bcolors.ENDC + str(show)
+
+    # Get photo
+    camera.capture(photo_name)
+
+    # Round the values
+    humidity = int(math.ceil(humidity))
+    temperature = int(math.ceil(temperature))
+    pressure = int(math.ceil(pressure))
+    
+    # Tweet to send
+    tweet = str('Time: ' + time + '\nDate: ' + date + '\nHumidity: ' + str(humidity) + '%\nTemperature: ' + str(temperature) + 'ºC\nPressure: ' + str(pressure) + ' mbar\nPeriod: ' + str(int(period)) + ' seconds' + '\n# RSEproject')
+    print bcolors.BOLD + 'Tweet: \n' + tweet + bcolors.ENDC
+
+    # Send tweet with photo
+    try:
+        api.update_with_media(photo_path, tweet)
+        print bcolors.OKGREEN + 'Tweet OK' + bcolors.ENDC
+        # sense.show_message('Tweet OK', text_colour=[0,255,0])
+    except:
+        print bcolors.FAIL + 'Tweet FAIL' + bcolors.ENDC
+        # sense.show_message('Tweet FAIL', text_colour=[255,0,0])
+
+    # Send direct message if any parameter is incorrect
+    if(humidity < low_humidity):
+        print bcolors.FAIL + 'Humidity low' + bcolors.ENDC
+        for user in users:
+            api.send_direct_message(user=user, text='Be careful! Humidity is low!')
+            print bcolors.HEADER + 'Message sent to ' + bcolors.ENDC + user 
+        if show is True:
+            if verbose is False:
+                sense.show_message('HL', text_colour=[255,0,0])
+            else:
+                sense.show_message('Humidity Low', text_colour=[255,0,0])
+    elif(humidity > high_humidity):
+        print bcolors.FAIL + 'Humidity high' + bcolors.ENDC
+        for user in users:
+            api.send_direct_message(user=user, text='Be careful! Humidity is high!')
+            print bcolors.HEADER + 'Message sent to ' + bcolors.ENDC + user 
+        if show is True:
+            if verbose is False:
+                sense.show_message('HH', text_colour=[255,0,0])
+            else:
+                sense.show_message('Humidity High', text_colour=[255,0,0])
+    else:
+        print bcolors.OKGREEN + 'Humidity OK' + bcolors.ENDC
+        if show is True:
+            if verbose is False:
+                sense.show_message('HOK', text_colour=[0,255,0])
+            else:
+                sense.show_message('Humidity OK', text_colour=[0,255,0])
+
+    if(temperature < low_temperature):
+        print bcolors.FAIL + 'Temperature low' + bcolors.ENDC
+        for user in users:
+            api.send_direct_message(user=user, text='Be careful! Temperature is low!')
+            print bcolors.HEADER + 'Message sent to ' + bcolors.ENDC + user 
+        if show is True:
+            if verbose is False:
+                sense.show_message('TL', text_colour=[255,0,0])
+            else:
+                sense.show_message('Temperature Low', text_colour=[255,0,0])
+    elif(temperature > high_temperature):
+        print bcolors.FAIL + 'Temperature high' + bcolors.ENDC
+        for user in users:
+            api.send_direct_message(user=user, text='Be careful! Temperature is high!')
+            print bcolors.HEADER + 'Message sent to ' + bcolors.ENDC + user 
+        if show is True:
+            if verbose is False:
+                sense.show_message('TH', text_colour=[255,0,0])
+            else:
+                sense.show_message('Temperature High', text_colour=[255,0,0])
+    else:
+        print bcolors.OKGREEN + 'Temperature OK' + bcolors.ENDC
+        if show is True:
+            if verbose is False:
+                sense.show_message('TOK', text_colour=[0,255,0])
+            else:
+                sense.show_message('Temperature OK', text_colour=[0,255,0])
+
+    if(pressure < low_pressure):
+        print bcolors.FAIL + 'Pressure low' + bcolors.ENDC
+        for user in users:
+            api.send_direct_message(user=user, text='Be careful! Pressure is low!')
+            print bcolors.HEADER + 'Message sent to ' + bcolors.ENDC + user 
+        if show is True:
+            if verbose is False:
+                sense.show_message('PL', text_colour=[255,0,0])
+            else:
+                sense.show_message('Pressure Low', text_colour=[255,0,0])
+    elif(pressure > high_pressure):
+        print bcolors.FAIL + 'Pressure high' + bcolors.ENDC
+        for user in users:
+            api.send_direct_message(user=user, text='Be careful! Pressure is high!')
+            print bcolors.HEADER + 'Message sent to ' + bcolors.ENDC + user 
+        if show is True:
+            if verbose is False:
+                sense.show_message('PH', text_colour=[255,0,0])
+            else:
+                sense.show_message('Pressure High', text_colour=[255,0,0])
+    else:
+        print bcolors.OKGREEN + 'Pressure OK' + bcolors.ENDC
+        if show is True:
+            if verbose is False:
+                sense.show_message('POK', text_colour=[0,255,0])
+            else:
+                sense.show_message('Pressure OK', text_colour=[0,255,0])
+
+    sleep(period)
