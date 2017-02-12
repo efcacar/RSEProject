@@ -20,6 +20,10 @@ This project don't have a own API Reference, but you can see the API Reference f
 and tweepy API Refrence:  
 <http://docs.tweepy.org/en/v3.5.0/api.html>  
 
+## Video
+
+<https://www.youtube.com/watch?v=Q-RzwbEuxRs&t=17s>
+
 ## Contributors
 
 This project is made by Efren Camarasa Carreres and Carles Torró Segura.
